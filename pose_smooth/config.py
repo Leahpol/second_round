@@ -40,4 +40,12 @@ class SmoothConfig:
         - `score_decay` should be in [0, 1].
         - Raise `ValueError` with a clear message.
         """
-        raise NotImplementedError("Implement SmoothConfig.validate")
+        if not (0 < self.alpha <= 1):
+            raise ValueError(f"alpha should be in (0, 1]")
+        if not (0 <= self.min_score <= 1) or not (0 <= self.teleport_trust_score <= 1):
+            raise ValueError(f"min_score and teleport_trust_score should be in [0, 1]")
+        if self.max_jump_px < 0:
+            raise ValueError(f"max_jump_px should be >= 0")
+        if not (0 <= self.score_decay <= 1):
+            raise ValueError(f"score_decay should be in [0, 1]")
+        return self
