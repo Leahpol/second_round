@@ -36,7 +36,7 @@ def read_jsonl(path: str | Path, num_keypoints: int = DEFAULT_NUM_KEYPOINTS) -> 
     """
 
     path = Path(path)
-    frames: List[FrameRecord] = []
+    frames = []
     last_valid_xy = [0.0, 0.0]
     # open the file and read the lines
     with path.open("r", encoding="utf-8") as file:
