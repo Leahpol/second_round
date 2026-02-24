@@ -94,4 +94,9 @@ def write_jsonl(path: str | Path, frames: Iterable[FrameRecord]) -> None:
     - Use `json.dumps(..., separators=(",", ":"))` for compact output.
     - You may allow NaN on write if your read path sanitizes it.
     """
-    
+
+    path = Path(path)
+    with path.open("w", encoding="utf-8") as file:
+        for frame in frames:
+            line = json.dumps(frame, separators=(",", ":"))
+            file.write(line + "\n")
