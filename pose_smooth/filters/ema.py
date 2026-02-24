@@ -84,6 +84,7 @@ class PoseEMASmoother:
                 s_x, s_y, s_score = self.smoothed[joint_indx]
                 current_smoothed = np.array([s_x, s_y])
                 jump = np.linalg.norm(observation - current_smoothed)
+                # teleport gating
                 if jump > self.config.max_jump_px and score < self.config.teleport_trust_score:
                     missing[joint_indx] = True
                     teleport_rejected[joint_indx] = True
