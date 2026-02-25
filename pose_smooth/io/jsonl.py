@@ -9,6 +9,7 @@ from pose_smooth.config import DEFAULT_NUM_KEYPOINTS
 from pose_smooth.types import FrameRecord
 import json
 import math
+import numpy as np
 
 
 def read_jsonl(path: str | Path, num_keypoints: int = DEFAULT_NUM_KEYPOINTS) -> List[FrameRecord]:
@@ -37,7 +38,7 @@ def read_jsonl(path: str | Path, num_keypoints: int = DEFAULT_NUM_KEYPOINTS) -> 
 
     path = Path(path)
     frames = []
-    last_valid_xy = [0.0, 0.0]
+    last_valid_xy = np.zeros((num_keypoints, 2), dtype=float)
     # open the file and read the lines
     with path.open("r", encoding="utf-8") as file:
         for line_num, line in enumerate(file, start=1):
@@ -53,22 +54,22 @@ def read_jsonl(path: str | Path, num_keypoints: int = DEFAULT_NUM_KEYPOINTS) -> 
                 raise ValueError(f"Missing required fields on line {line_num}") 
             if len(frame_data["keypoints"]) != num_keypoints:
                 raise ValueError(f"Expected {num_keypoints} keypoints on line {line_num}")
-            for keypoint in frame_data["keypoints"]:
+            for keypoint_idx, keypoint in enumerate(frame_data["keypoints"]):
                 if len(keypoint) != 3:
                     raise ValueError(f"Expected 3 values for keypoint on line {line_num}")
                 # sanitize the keypoint coordinates and score
                 x, y, score = keypoint
                 if not math.isfinite(x):
-                    keypoint[0] = last_valid_xy[0]
-                    keypoint[2] = 0
+                    keypoint[0] = last_valid_xy[keypoint_idx, 0]
+                    keypoint[2] = 0.0
                 if not math.isfinite(y):
-                    keypoint[1] = last_valid_xy[1]
-                    keypoint[2] = 0
+                    keypoint[1] = last_valid_xy[keypoint_idx, 1]
+                    keypoint[2] = 0.0
                 if score < 0 or not math.isfinite(score):
-                    keypoint[2] = 0
+                    keypoint[2] = 0.0
                 if score > 1:
-                    keypoint[2] = 1
-                last_valid_xy = [keypoint[0], keypoint[1]]
+                    keypoint[2] = 1.0
+                last_valid_xy[keypoint_idx] = np.array([keypoint[0], keypoint[1]])
             # cast the line into a FrameRecord after all checks
             frame_data["keypoints"] = frame_data["keypoints"]
             frames.append(frame_data)
