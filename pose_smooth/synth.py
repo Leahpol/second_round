@@ -41,37 +41,46 @@ def generate_synthetic_frames(
     - Sample scores high by default, low for dropouts.
     - Keep output deterministic for a fixed seed.
     """
+    # deterministic random number generator
     rnd = np.random.RandomState(seed)
 
+    # moving center trajectory only
     t = np.linspace(0.0, 1.0, frames, dtype=float)
     angle = 2.0 * np.pi * t
     center_x = 320.0 + 80.0 * np.cos(angle)
     center_y = 240.0 + 40.0 * np.sin(angle)
-    centers = np.stack([center_x, center_y], axis=1)  # (T, 2)
+    center_trajectory = np.stack([center_x, center_y], axis=1)  
 
-    # Stable per-joint offsets around the center.
+    # per-joint offsets 
     k = np.arange(num_keypoints, dtype=float)
     base_ang = 2.0 * np.pi * (k / max(num_keypoints, 1))
     r = 40.0 + 10.0 * np.sin(2.0 * base_ang)
-    offsets = np.stack([r * np.cos(base_ang), r * np.sin(base_ang)], axis=1)  # (V, 2)
+    per_joint_offsets = np.stack([r * np.cos(base_ang), r * np.sin(base_ang)], axis=1)  
 
-    out: List[FrameRecord] = []
+    # smooth motion + noise
+    frames_record = []
     for i in range(frames):
-        base_xy = centers[i][None, :] + offsets  # (V, 2)
+        base_xy = center_trajectory[i][None, :] + per_joint_offsets  
+        # noise 
         jitter = rnd.normal(loc=0.0, scale=jitter_std, size=(num_keypoints, 2))
-        xy = base_xy + jitter
-
-        dropped = rnd.rand(num_keypoints) < dropout_prob
-        teleported = (~dropped) & (rnd.rand(num_keypoints) < teleport_prob)
-        if np.any(teleported):
-            xy[teleported] += rnd.normal(loc=0.0, scale=80.0, size=(int(np.sum(teleported)), 2))
+        base_noise_xy = base_xy + jitter
 
         score = np.full((num_keypoints,), 0.99, dtype=float)
-        score[dropped] = 0.01
+        keypoints = np.concatenate([base_noise_xy, score[:, None]], axis=1)  # (num_keypoints, 3)
 
-        keypoints = np.concatenate([xy, score[:, None]], axis=1)  # (V, 3)
-        keypoints[dropped, 0:2] = np.nan
+        # dropout
+        dropped = rnd.rand(num_keypoints) < dropout_prob
+        keypoints[dropped, 0] = np.nan
+        keypoints[dropped, 1] = np.nan
+        keypoints[dropped, 2] = 0.01
 
-        out.append({"frame_idx": i, "keypoints": keypoints.tolist()})
+        # teleport 
+        teleported = (~dropped) & (rnd.rand(num_keypoints) < teleport_prob)
+        if np.any(teleported):
+            n = int(np.sum(teleported))
+            keypoints[teleported, 0] += rnd.normal(loc=0.0, scale=80.0, size=n)
+            keypoints[teleported, 1] += rnd.normal(loc=0.0, scale=80.0, size=n)
 
-    return out
+        frames_record.append({"frame_idx": i, "keypoints": keypoints.tolist()})
+
+    return frames_record

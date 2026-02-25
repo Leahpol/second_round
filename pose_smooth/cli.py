@@ -12,26 +12,6 @@ from pose_smooth.synth import generate_synthetic_frames
 from pose_smooth.io.jsonl import read_jsonl, write_jsonl
 
 
-def _smooth(args):
-    frames = read_jsonl(args.in_path)
-    smoothed = smooth_frames(frames, config=None)  
-    write_jsonl(args.out_path, smoothed)
-
-
-def _metrics(args):
-    raw = read_jsonl(args.in_path)
-    smooth = read_jsonl(args.smoothed_path) if args.smoothed_path else None
-    compute_metrics(raw, smooth, args.min_score)
-
-
-def _demo(args):
-    generate_synthetic_frames(
-        frames=args.frames,
-        jitter_std=args.jitter,
-        dropout_prob=args.dropout_prob,
-        teleport_prob=args.teleport_prob,
-        seed=args.seed,
-    )
 
 def build_parser() -> argparse.ArgumentParser:
     """
@@ -116,3 +96,24 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
     args.func(args)
     return 0
+
+def _smooth(args):
+    frames = read_jsonl(args.in_path)
+    smoothed = smooth_frames(frames, config=None)  
+    write_jsonl(args.out_path, smoothed)
+
+
+def _metrics(args):
+    raw = read_jsonl(args.in_path)
+    smooth = read_jsonl(args.smoothed_path) if args.smoothed_path else None
+    compute_metrics(raw, smooth, args.min_score)
+
+
+def _demo(args):
+    generate_synthetic_frames(
+        frames=args.frames,
+        jitter_std=args.jitter,
+        dropout_prob=args.dropout_prob,
+        teleport_prob=args.teleport_prob,
+        seed=args.seed,
+    )
