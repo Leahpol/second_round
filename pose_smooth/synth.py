@@ -66,7 +66,7 @@ def generate_synthetic_frames(
         base_noise_xy = base_xy + jitter
 
         score = np.full((num_keypoints,), 0.99, dtype=float)
-        keypoints = np.concatenate([base_noise_xy, score[:, None]], axis=1)  # (num_keypoints, 3)
+        keypoints = np.concatenate([base_noise_xy, score[:, None]], axis=1)  
 
         # dropout
         dropped = rnd.rand(num_keypoints) < dropout_prob

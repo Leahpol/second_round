@@ -5,7 +5,16 @@ from __future__ import annotations
 import argparse
 from typing import Optional
 
-from pose_smooth.config import DEFAULT_ALPHA, DEFAULT_MIN_SCORE, DEFAULT_MAX_JUMP_PX, DEFAULT_SCORE_DECAY, DEFAULT_TELEPORT_TRUST_SCORE
+from pathlib import Path
+
+from pose_smooth.config import (
+    DEFAULT_ALPHA,
+    DEFAULT_MIN_SCORE,
+    DEFAULT_MAX_JUMP_PX,
+    DEFAULT_SCORE_DECAY,
+    DEFAULT_TELEPORT_TRUST_SCORE,
+    SmoothConfig,
+)
 from pose_smooth.filters.ema import smooth_frames
 from pose_smooth.metrics.jitter import compute_metrics
 from pose_smooth.synth import generate_synthetic_frames
@@ -98,22 +107,51 @@ def main(argv: Optional[list[str]] = None) -> int:
     return 0
 
 def _smooth(args):
+    config = SmoothConfig(
+        alpha=args.alpha,
+        min_score=args.min_score,
+        max_jump_px=args.max_jump_px,
+        score_decay=args.score_decay,
+        teleport_trust_score=args.teleport_trust_score,
+    )
     frames = read_jsonl(args.in_path)
-    smoothed = smooth_frames(frames, config=None)  
+    smoothed = smooth_frames(frames, config=config)
     write_jsonl(args.out_path, smoothed)
 
 
 def _metrics(args):
     raw = read_jsonl(args.in_path)
     smooth = read_jsonl(args.smoothed_path) if args.smoothed_path else None
-    compute_metrics(raw, smooth, args.min_score)
+    metrics = compute_metrics(raw, smooth, args.min_score)
+    for k, v in metrics.items():
+        print(f"{k}: {v}")
 
 
 def _demo(args):
-    generate_synthetic_frames(
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    input_path = out_dir / "input.jsonl"
+    output_path = out_dir / "output.jsonl"
+
+    raw_frames = generate_synthetic_frames(
         frames=args.frames,
         jitter_std=args.jitter,
         dropout_prob=args.dropout_prob,
         teleport_prob=args.teleport_prob,
         seed=args.seed,
     )
+    write_jsonl(input_path, raw_frames)
+
+    config = SmoothConfig(
+        alpha=args.alpha,
+        min_score=args.min_score,
+        max_jump_px=args.max_jump_px,
+        score_decay=args.score_decay,
+        teleport_trust_score=args.teleport_trust_score,
+    )
+    smoothed_frames = smooth_frames(raw_frames, config=config)
+    write_jsonl(output_path, smoothed_frames)
+
+    metrics = compute_metrics(raw_frames, smoothed_frames, args.min_score)
+    for k, v in metrics.items():
+        print(f"{k}: {v}")

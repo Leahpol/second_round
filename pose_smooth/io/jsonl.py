@@ -9,7 +9,7 @@ from pose_smooth.config import DEFAULT_NUM_KEYPOINTS
 from pose_smooth.types import FrameRecord
 import json
 import math
-import numpy as np
+import numpy as np  
 
 
 def read_jsonl(path: str | Path, num_keypoints: int = DEFAULT_NUM_KEYPOINTS) -> List[FrameRecord]:
